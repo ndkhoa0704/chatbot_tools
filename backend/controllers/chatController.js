@@ -9,12 +9,9 @@ function ChatController() {
                 const completion = await SELF.var.client.chat.completions.create({
                     model: SELF.var.model,
                     messages: [
-                        { role: 'specialist', content: message },
-                        // { role: 'user', content: 'Are semicolons optional in JavaScript?' },
+                        { role: 'assistant', content: message },
                     ],
                 });
-
-                console.log(completion.choices[0].message.content);
                 return completion.choices[0].message.content;
             }
         },
@@ -32,11 +29,10 @@ function ChatController() {
             const { message } = req.body;
             if (!message) return res.status(400).json({ message: 'Message is required' });
 
-            const aiReply = SELF.fn.getAIReply(message);
-            console.log(aiReply);
+            const aiReply = await SELF.fn.getAIReply(message);
             try {
                 const saved = await chatService.saveMessage(req.user.id, message, aiReply);
-                res.json(saved);
+                return res.json(saved);
             } catch (err) {
                 console.error(err);
                 res.status(500).json({ message: 'Database error' });

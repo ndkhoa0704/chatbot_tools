@@ -1,8 +1,9 @@
 const bcrypt = require('bcrypt');
-const db = require('../utils/db');
+const { db } = require('../utils/db');
 
 const DEFAULT_USER = process.env.DEFAULT_USER || 'admin';
 const DEFAULT_PASS = process.env.DEFAULT_PASS || 'password';
+
 
 function UserService() {
     const SELF = {}
@@ -37,6 +38,7 @@ function UserService() {
             }
         },
         verifyPassword: async (password, passwordHash) => {
+            console.log(password, passwordHash);
             return bcrypt.compare(password, passwordHash);
         }
     }
