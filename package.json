@@ -1,0 +1,19 @@
+{
+  "name": "chatbot_tools",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "build:frontend": "cd frontend && npm install && npm run build",
+    "build": "npm run build:frontend",
+    "start:full": "npm run build && npm start",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
