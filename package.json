@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
+    "start": "cd frontend && npm install && npm run build && cd ../backend && npm install && npm start",
+    "dev": "nodemon backend/index.js",
     "build:frontend": "cd frontend && npm install && npm run build",
     "build": "npm run build:frontend",
     "start:full": "npm run build && npm start",
