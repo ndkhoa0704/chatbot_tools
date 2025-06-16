@@ -47,7 +47,11 @@ async function sendMessage() {
     // Find index of userMessage to update ai_reply
     const idx = messages.value.findIndex((m) => m === userMessage);
     if (idx !== -1) {
-      messages.value[idx].ai_reply = res.data.ai_reply;
+      // Replace the whole object to ensure Vue reactivity triggers
+      messages.value[idx] = {
+        ...messages.value[idx],
+        ai_reply: res.data.ai_reply,
+      };
     }
   } catch (err) {
     logger.error(err);
