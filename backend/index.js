@@ -7,6 +7,9 @@ const chatRoutes = require('./routes/chatRoutes');
 const UserService = require('./services/userService');
 const { init } = require('./utils/db');
 const path = require('path');
+const sanitizeInput = require('./middlewares/sanitizeInput');
+const logRequest = require('./middlewares/logRequest');
+const logger = require('./utils/logger');
 
 const app = express();
 
@@ -14,6 +17,8 @@ app.use(cors());
 app.use(express.json());
 app.use(helmet());
 app.use(express.static(path.join(__dirname, '../public')));
+app.use(sanitizeInput);
+app.use(logRequest);
 
 // Mount routers
 app.use('/api', authRoutes);
@@ -27,7 +32,7 @@ app.get('*', (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
+    logger.info(`Server running on port ${PORT}`);
     init(() => {
         UserService.ensureDefaultUser();
     });

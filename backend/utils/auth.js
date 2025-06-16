@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const UserService = require('../services/userService');
+const logger = require('./logger');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretjwtkey';
 
@@ -13,7 +14,7 @@ function authenticateToken(req, res, next) {
             req.user = user;
             next();
         }).catch(err => {
-            console.error('Error getting user by username', err);
+            logger.error('Error getting user by username', err);
             res.sendStatus(403);
         });
     });

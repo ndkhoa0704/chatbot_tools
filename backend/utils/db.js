@@ -1,12 +1,13 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const logger = require('./logger');
 
 const dbPath = path.join(__dirname, '..', 'database.sqlite');
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
-        console.error('Failed to connect to SQLite DB', err);
+        logger.error('Failed to connect to SQLite DB', err);
     } else {
-        console.log('Connected to SQLite DB');
+        logger.info('Connected to SQLite DB');
     }
 });
 
@@ -30,14 +31,14 @@ function init(cb) {
     ];
     db.run(initQueries[0], (err) => {
         if (err) {
-            console.error('Failed to create users table', err);
+            logger.error('Failed to create users table', err);
         } else {
-            console.log('Users table created');
+            logger.info('Users table created');
             db.run(initQueries[1], (err) => {
                 if (err) {
-                    console.error('Failed to create messages table', err);
+                    logger.error('Failed to create messages table', err);
                 } else {
-                    console.log('Messages table created');
+                    logger.info('Messages table created');
                     cb();
                 }
             });

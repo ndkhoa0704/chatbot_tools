@@ -23,7 +23,7 @@ async function fetchHistory() {
     });
     messages.value = res.data;
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     router.push('/login');
   }
 }
@@ -50,7 +50,7 @@ async function sendMessage() {
       messages.value[idx].ai_reply = res.data.ai_reply;
     }
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     router.push('/login');
   }
 }

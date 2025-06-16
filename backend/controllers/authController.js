@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const UserService = require('../services/userService');
 const { JWT_SECRET } = require('../utils/auth');
+const logger = require('../utils/logger');
+
 
 function AuthController() {
     const SELF = {}
@@ -19,7 +21,7 @@ function AuthController() {
                 const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
                 res.json({ token });
             } catch (err) {
-                console.error(err);
+                logger.error(err);
                 res.status(500).json({ message: 'Server error' });
             }
         }

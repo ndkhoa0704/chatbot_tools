@@ -1,11 +1,13 @@
 const chatService = require('../services/chatService');
 const OpenAI = require('openai');
+const logger = require('../utils/logger');
+
 
 function ChatController() {
     const SELF = {
         fn: {
             getAIReply: async (message) => {
-                console.log(SELF.var.model)
+                logger.info(SELF.var.model)
                 const completion = await SELF.var.client.chat.completions.create({
                     model: SELF.var.model,
                     messages: [
@@ -34,7 +36,7 @@ function ChatController() {
                 const saved = await chatService.saveMessage(req.user.id, message, aiReply);
                 return res.json(saved);
             } catch (err) {
-                console.error(err);
+                logger.error(err);
                 res.status(500).json({ message: 'Database error' });
             }
         },
@@ -43,7 +45,7 @@ function ChatController() {
                 const rows = await chatService.getMessagesByUser(req.user.id);
                 res.json(rows);
             } catch (err) {
-                console.error(err);
+                logger.error(err);
                 res.status(500).json({ message: 'Database error' });
             }
         }

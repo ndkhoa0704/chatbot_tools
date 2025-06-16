@@ -1,5 +1,7 @@
 const bcrypt = require('bcrypt');
 const { db } = require('../utils/db');
+const logger = require('../utils/logger');
+
 
 const DEFAULT_USER = process.env.DEFAULT_USER || 'admin';
 const DEFAULT_PASS = process.env.DEFAULT_PASS || 'password';
@@ -31,14 +33,14 @@ function UserService() {
                 const user = await module.exports.getUserByUsername(DEFAULT_USER);
                 if (!user) {
                     await module.exports.createUser(DEFAULT_USER, DEFAULT_PASS);
-                    console.log(`Default user "${DEFAULT_USER}" created with password "${DEFAULT_PASS}"`);
+                    logger.info(`Default user "${DEFAULT_USER}" created with password "${DEFAULT_PASS}"`);
                 }
             } catch (err) {
-                console.error('Error ensuring default user', err);
+                logger.error('Error ensuring default user', err);
             }
         },
         verifyPassword: async (password, passwordHash) => {
-            console.log(password, passwordHash);
+            logger.info(password, passwordHash);
             return bcrypt.compare(password, passwordHash);
         }
     }
