@@ -11,7 +11,7 @@ function WebhookController() {
                 if (req.query.key !== process.env.DEPLOY_KEY_WEBHOOK) {
                     return res.status(401).json({ msg: 'Permission denied' })
                 }
-                exec(`sh ${__dirname}/../deploy.sh`, (error, stdout, stderr) => {
+                exec(`sh deploy.sh`, (error, stdout, stderr) => {
                     if (error) {
                         logger.error(`exec deploy.sh error: ${error}`);
                     }
