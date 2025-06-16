@@ -12,18 +12,32 @@ if (!token) {
 const messageInput = ref('');
 const messages = ref([]);
 
+const conversationIds = ref([]);
+const currentConversationId = ref(null);
+
 // NEW: state for mobile sidebar toggle
 const sidebarOpen = ref(false);
 
-async function fetchHistory() {
+async function getConversations() {
   try {
-    const res = await axios.get(`/api/history`, {
+    const res = await axios.get(`/api/conversation`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    conversationIds.value = res.data;
+  } catch (err) {
+    console.error(err);
+    router.push('/login');
+  }
+}
+
+async function getMessagesByConversation(conversationId) {
+  try {
+    const res = await axios.get(`/api/conversation/message?conversationId=${currentConversationId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     messages.value = res.data;
   } catch (err) {
     console.error(err);
-    router.push('/login');
   }
 }
 
@@ -46,9 +60,11 @@ async function sendMessage() {
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    // Cập nhật reply
-    userMessage.ai_reply = res.data.ai_reply;
-
+    messages.value.push({
+      content: res.data,
+      ai_reply: res.data,
+      timestamp: new Date().toISOString(),
+    });
   } catch (err) {
     console.error(err);
     router.push('/login');
@@ -56,7 +72,7 @@ async function sendMessage() {
 }
 
 onMounted(() => {
-  fetchHistory();
+  getConversations();
 });
 </script>
 

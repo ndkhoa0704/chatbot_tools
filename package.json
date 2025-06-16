@@ -8,9 +8,7 @@
     "build:frontend": "cd frontend && npm install && npm run build",
     "build": "npm run build:frontend",
     "start:full": "npm run build && npm start",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "install:all": "npm install --prefix backend && npm install --prefix frontend",
-    "postinstall": "npm run install:all"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",

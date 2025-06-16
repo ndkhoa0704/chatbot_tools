@@ -25,7 +25,14 @@ function init(cb) {
         user_id INTEGER NOT NULL,
         content TEXT NOT NULL,
         ai_reply TEXT NOT NULL,
+        conversation_id INTEGER NOT NULL,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (conversation_id) REFERENCES conversations(id)
+        );`,
+        `CREATE TABLE IF NOT EXISTS conversations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users(id)
         );`,
     ];
@@ -39,6 +46,14 @@ function init(cb) {
                     logger.error('Failed to create messages table', err);
                 } else {
                     logger.info('Messages table created');
+                    db.run(initQueries[2], (err) => {
+                        if (err) {
+                            logger.error('Failed to create conversations table', err);
+                        } else {
+                            logger.info('Conversations table created');
+                            cb();
+                        }
+                    });
                     cb();
                 }
             });
