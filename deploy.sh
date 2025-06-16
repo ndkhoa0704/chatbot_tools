@@ -12,13 +12,6 @@ cd $APP_DIR
     echo "$(date -Iseconds): Pull code done!!!"
 } >> $LOG_PATH 2>&1
 
-{
-    echo "$(date -Iseconds) Installing dependencies..."
-    npm install
-    echo "$(date -Iseconds) Install dependencies done!!!"
-} >> $LOG_PATH 2>&1
-
-
 # Restart app by PM2
 {
     echo "$(date -Iseconds) Restarting application with PM2..." 
