@@ -1,0 +1,17 @@
+name: CI/CD for Node.js Application
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger server deployment webhook
+        uses: distributhor/workflow-webhook@v3
+        with:
+          webhook_url: 'https://chatbot.koanguyn.org/webhook/deploy?key=${{ secrets.DEPLOY_KEY_WEBHOOK }}' # Replace with your webhook URL

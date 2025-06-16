@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const authRoutes = require('./routes/authRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const webhookRoutes = require('./routes/webhookRoutes');
 const UserService = require('./services/userService');
 const { init } = require('./utils/db');
 const path = require('path');
@@ -23,6 +24,7 @@ app.use(logRequest);
 // Mount routers
 app.use('/api', authRoutes);
 app.use('/api', chatRoutes);
+app.use('/webhook', webhookRoutes);
 
 // Fallback route to support client-side routing (e.g., /chat)
 app.get('*', (req, res) => {
