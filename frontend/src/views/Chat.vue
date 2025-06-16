@@ -2,7 +2,6 @@
 import { onMounted, ref } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
-import { API_HOST } from '../config.js';
 
 const router = useRouter();
 const token = localStorage.getItem('token');
@@ -18,18 +17,19 @@ const sidebarOpen = ref(false);
 
 async function fetchHistory() {
   try {
-    const res = await axios.get(`${API_HOST}/api/history`, {
+    const res = await axios.get(`/api/history`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     messages.value = res.data;
   } catch (err) {
-    logger.error(err);
+    console.error(err);
     router.push('/login');
   }
 }
 
 async function sendMessage() {
   if (!messageInput.value.trim()) return;
+
   const userMessage = {
     content: messageInput.value,
     ai_reply: '',
@@ -38,19 +38,19 @@ async function sendMessage() {
   messages.value.push(userMessage);
   const toSend = messageInput.value;
   messageInput.value = '';
+
   try {
     const res = await axios.post(
-      `${API_HOST}/api/chat`,
+      '/api/chat',
       { message: toSend },
       { headers: { Authorization: `Bearer ${token}` } }
     );
-    // Find index of userMessage to update ai_reply
-    const idx = messages.value.findIndex((m) => m === userMessage);
-    if (idx !== -1) {
-      messages.value.push(res.data.ai_reply);
-    }
+
+    // Cập nhật reply
+    userMessage.ai_reply = res.data.ai_reply;
+
   } catch (err) {
-    logger.error(err);
+    console.error(err);
     router.push('/login');
   }
 }

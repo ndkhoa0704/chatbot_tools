@@ -2,7 +2,6 @@
 import { ref } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
-import { API_HOST } from '../config.js';
 
 const router = useRouter();
 const username = ref('');
@@ -16,7 +15,7 @@ async function login() {
     return;
   }
   try {
-    const res = await axios.post(`${API_HOST}/api/login`, {
+    const res = await axios.post(`/api/login`, {
       username: username.value,
       password: password.value,
     });

@@ -4,11 +4,13 @@
   "main": "index.js",
   "scripts": {
     "start": "cd frontend && npm install && npm run build && cd ../backend && npm install && npm start",
-    "dev": "nodemon backend/index.js",
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
     "build:frontend": "cd frontend && npm install && npm run build",
     "build": "npm run build:frontend",
     "start:full": "npm run build && npm start",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "postinstall": "npm run install:all"
   },
   "author": "",
   "license": "ISC",

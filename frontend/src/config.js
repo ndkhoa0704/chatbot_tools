@@ -1,1 +1,0 @@
-export const API_HOST = 'https://chatbot.koanguyn.org'; 
