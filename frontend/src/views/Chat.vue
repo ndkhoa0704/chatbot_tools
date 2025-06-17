@@ -12,18 +12,46 @@ if (!token) {
 const messageInput = ref('');
 const messages = ref([]);
 
-const conversationIds = ref([]);
+const conversations = ref([]);
 const currentConversationId = ref(null);
 
 // NEW: state for mobile sidebar toggle
 const sidebarOpen = ref(false);
+
+// NEW: create conversation
+async function createNewConversation() {
+  // Optimistically reset UI
+  messages.value = [];
+  currentConversationId.value = null;
+
+  try {
+    const res = await axios.post(
+      '/api/conversation',
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    // Expecting { msg: 'success', data: { id: <number> } }
+    const newId = res.data?.data?.id;
+    if (newId) {
+      conversationIds.value.push(newId);
+      currentConversationId.value = newId;
+    }
+  } catch (err) {
+    // If the request fails, we simply log the error; the UI already reset
+    console.error(err);
+  }
+
+  // Close sidebar on mobile after creating conversation
+  sidebarOpen.value = false;
+}
 
 async function getConversations() {
   try {
     const res = await axios.get(`/api/conversation`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    conversationIds.value = res.data;
+    conversations.value = res.data;
   } catch (err) {
     console.error(err);
     router.push('/login');
@@ -113,9 +141,19 @@ onMounted(() => {
       </div>
       <!-- Desktop sidebar header -->
       <h2 class="text-xl font-semibold mb-4 hidden md:block">Chat History</h2>
+      <!-- NEW: New conversation button -->
+      <button @click="createNewConversation"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded mb-4 flex items-center justify-center">
+        <!-- simple plus icon -->
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        New Chat
+      </button>
       <ul>
-        <li v-for="(msg, idx) in messages" :key="idx" class="mb-2 text-sm truncate">
-          {{ msg.content }}
+        <li v-for="(conversation, idx) in conversations" :key="idx" class="mb-2 text-sm truncate">
+          {{ conversation.content }}
         </li>
       </ul>
     </aside>

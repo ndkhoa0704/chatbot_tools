@@ -39,7 +39,7 @@ function ChatController() {
             }
         },
         chat: async (req, res) => {
-            const { message } = req.body;
+            const { message,  } = req.body;
             if (!message) return res.status(400).json({ message: 'Message is required' });
             const aiReply = await SELF.fn.getAIReply(message);
             try {
