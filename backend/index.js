@@ -35,8 +35,8 @@ app.get('*', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, '0.0.0.0', () => {
-    logger.info(`Server running on port ${PORT}`);
+app.listen(PORT, '127.0.0.1', () => {
+    logger.info(`Server running on port ${PORT} (IPv4)`);
     init(() => {
         UserService.ensureDefaultUser();
     });

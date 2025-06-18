@@ -12,7 +12,7 @@ if (!token) {
 const messageInput = ref('');
 const messages = ref([]);
 
-const conversations = ref([]);
+const conversationIds = ref([]);
 const currentConversationId = ref(null);
 
 // NEW: state for mobile sidebar toggle
@@ -51,7 +51,7 @@ async function getConversations() {
     const res = await axios.get(`/api/conversation`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    conversations.value = res.data;
+    conversationIds.value = res.data;
   } catch (err) {
     console.error(err);
     router.push('/login');
