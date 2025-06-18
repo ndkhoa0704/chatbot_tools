@@ -15,6 +15,8 @@ const messages = ref([]);
 const conversationIds = ref([]);
 const currentConversationId = ref(null);
 
+const isFirstMsg = ref(true);
+
 // NEW: state for mobile sidebar toggle
 const sidebarOpen = ref(false);
 
@@ -22,6 +24,7 @@ const sidebarOpen = ref(false);
 async function createNewConversation() {
   // Optimistically reset UI
   messages.value = [];
+  isFirstMsg.value = true;
   currentConversationId.value = null;
 
   try {
@@ -59,8 +62,9 @@ async function getConversations() {
 }
 
 async function getMessagesByConversation(conversationId) {
+  isFirstMsg.value = false;
   try {
-    const res = await axios.get(`/api/conversation/message?conversationId=${currentConversationId}`, {
+    const res = await axios.get(`/api/conversation/message?conversationId=${conversationId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     messages.value = res.data;
@@ -142,7 +146,7 @@ onMounted(() => {
       <!-- Desktop sidebar header -->
       <h2 class="text-xl font-semibold mb-4 hidden md:block">Chat History</h2>
       <!-- NEW: New conversation button -->
-      <button @click="createNewConversation"
+      <button @click="createNewConversation()"
         class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded mb-4 flex items-center justify-center">
         <!-- simple plus icon -->
         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
@@ -152,7 +156,7 @@ onMounted(() => {
         New Chat
       </button>
       <ul>
-        <li v-for="(conversation, idx) in conversations" :key="idx" class="mb-2 text-sm truncate">
+        <li v-for="(conversation, idx) in conversations" :key="idx" class="mb-2 text-sm truncate" @click="getMessagesByConversation(conversation.id)">
           {{ conversation.content }}
         </li>
       </ul>

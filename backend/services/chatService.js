@@ -7,15 +7,15 @@ function ChatService() {
             return new Promise((resolve, reject) => {
                 db.run('INSERT INTO conversations (user_id) VALUES (?)', [userId], function (err) {
                     if (err) return reject(err);
-                    resolve({ id: this.lastID });
+                    resolve(this.lastID);
                 });
             })
         },
-        saveMessage: async (userId, content, aiReply) => {
+        saveMessage: async (userId, content, aiReply, conversationId) => {
             return new Promise((resolve, reject) => {
                 db.run(
-                    'INSERT INTO messages (user_id, content, ai_reply) VALUES (?, ?, ?)',
-                    [userId, content, aiReply],
+                    'INSERT INTO messages (user_id, content, ai_reply, conversation_id) VALUES (?, ?, ?, ?)',
+                    [userId, content, aiReply, conversationId],
                     function (err) {
                         if (err) return reject(err);
                         resolve({ id: this.lastID, content, ai_reply: aiReply });

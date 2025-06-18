@@ -1,6 +1,7 @@
 const chatService = require('../services/chatService');
 const OpenAI = require('openai');
 const logger = require('../utils/logger');
+const { db } = require('../utils/db');
 
 
 function ChatController() {
@@ -28,24 +29,30 @@ function ChatController() {
         }
     }
     return {
-        // This is mock AI reply; replace with real integration later
-        getConversationTitle: async (req, res) => {
-            const { message } = req.body;
+        updateConversationTitle: async (req, res) => {
+            const { message, conversationId } = req.body;
             const instruction = `
             You are a helpful assistant that generates a title for a conversation based on the message.
             The title should be a single sentence that captures the essence of the conversation.
             The title should be no more than 10 words.
             The title should be in the same language as the conversation.
+
+            Here is the message:
+            ${message}
             `
-            const rs = await SELF.fn.getAIReply(message, instruction);
-            const title = await chatService.getConversationTitle(message, instruction);
-
-
+            try {
+                const title = await SELF.fn.getAIReply(instruction);
+                db.run('UPDATE conversations SET title = ? WHERE id = ?', [title, conversationId]);
+            } catch (err) {
+                logger.error('ChatController.updateConversationTitle - ', err.stack);
+                res.status(500).json({ message: 'Database error' });
+            }
             res.json({ msg: 'success', data: title });
         },
         createConversation: async (req, res) => {
             try {
                 const conversation = await chatService.createConversation(req.user.id);
+                console.log(conversation);
                 res.json({ msg: 'success', data: conversation });
             } catch (err) {
                 logger.error('ChatController.createConversation - ', err.stack);
@@ -53,14 +60,15 @@ function ChatController() {
             }
         },
         chat: async (req, res) => {
-            const { message, } = req.body;
+            const { message, conversationId } = req.body;
             if (!message) return res.status(400).json({ message: 'Message is required' });
             const aiReply = await SELF.fn.getAIReply(message);
             try {
-                const saved = await chatService.saveMessage(req.user.id, message, aiReply);
+                const saved = await chatService.saveMessage(req.user.id, message, aiReply, conversationId);
                 return res.json({ msg: 'success', data: saved });
             } catch (err) {
                 logger.error(err);
+                console.log(err);
                 res.status(500).json({ message: 'Database error' });
             }
         },
@@ -76,9 +84,9 @@ function ChatController() {
         },
         getConversationByUser: async (req, res) => {
             try {
-                const { userId } = req.query;
-                const rows = await chatService.getConversationByUser(userId);
-                res.json({ msg: 'success', data: rows });
+                const data = await chatService.getConversationByUser(req.user.id);
+                console.log(data);
+                res.json({ msg: 'success', data: data });
             } catch (err) {
                 logger.error(err);
                 res.status(500).json({ message: 'Database error' });
