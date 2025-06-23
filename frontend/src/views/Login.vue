@@ -15,11 +15,18 @@ async function login() {
     return;
   }
   try {
-    const res = await axios.post(`/api/login`, {
-      username: username.value,
-      password: password.value,
-    });
-    localStorage.setItem('token', res.data.token);
+    const res = await axios.post(
+      `/api/login`,
+      {
+        username: username.value,
+        password: password.value,
+      },
+      { withCredentials: true }
+    );
+    // Store token only if provided (for backward compatibility)
+    if (res.data?.token) {
+      localStorage.setItem('token', res.data.token);
+    }
     router.push('/chat');
   } catch (err) {
     error.value = err?.response?.data?.message || 'Login failed';

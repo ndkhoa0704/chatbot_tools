@@ -5,8 +5,13 @@ const logger = require('./logger');
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretjwtkey';
 
 function authenticateToken(req, res, next) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    // Try to get token from HttpOnly cookie first, then fallback to Authorization header
+    let token = req.cookies?.token;
+
+    if (!token) {
+        const authHeader = req.headers['authorization'];
+        token = authHeader && authHeader.split(' ')[1];
+    }
     if (!token) return res.sendStatus(401);
     jwt.verify(token, JWT_SECRET, (err, user) => {
         if (err) return res.sendStatus(403);

@@ -1,6 +1,7 @@
 require('dotenv').config({ path: __dirname + '/../.env' });
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 const authRoutes = require('./routes/authRoutes');
 const chatRoutes = require('./routes/chatRoutes');
@@ -14,7 +15,9 @@ const logger = require('./utils/logger');
 
 const app = express();
 
-app.use(cors());
+// Allow credentials (cookies) and specify allowed origin
+app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173', credentials: true }));
+app.use(cookieParser());
 app.use(express.json());
 app.use(helmet());
 if (process.env.NODE_ENV === 'production') {
