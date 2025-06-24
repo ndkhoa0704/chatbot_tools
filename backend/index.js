@@ -16,7 +16,42 @@ const logger = require('./utils/logger');
 const app = express();
 
 // Allow credentials (cookies) and specify allowed origin
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173', credentials: true }));
+
+// Security middleware with CSP configuration for Vue.js
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: [
+                "'self'",
+                "'unsafe-inline'",
+                "'unsafe-eval'",
+                "https://unpkg.com",
+                "https://cdn.tailwindcss.com",
+                "https://cdnjs.cloudflare.com"
+            ],
+            styleSrc: [
+                "'self'",
+                "'unsafe-inline'",
+                "https://cdn.tailwindcss.com",
+                "https://cdnjs.cloudflare.com"
+            ],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'"],
+            fontSrc: [
+                "'self'",
+                "https://cdnjs.cloudflare.com"
+            ],
+            objectSrc: ["'none'"],
+            mediaSrc: ["'self'"],
+            frameSrc: ["'none'"],
+        },
+    },
+}));
+app.use(cors({
+    origin: true, // Allow dynamic origin or set specific domain e.g. 'http://localhost:5173'
+    credentials: true
+}));
 app.use(cookieParser());
 app.use(express.json());
 app.use(helmet());
