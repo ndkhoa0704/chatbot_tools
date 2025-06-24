@@ -12,7 +12,7 @@ if (!token) {
 const messageInput = ref('');
 const messages = ref([]);
 
-const conversationIds = ref([]);
+const conversations = ref([]);
 const currentConversationId = ref(null);
 
 const isFirstMsg = ref(true);
@@ -22,7 +22,7 @@ const sidebarOpen = ref(false);
 
 // NEW: create conversation
 async function createNewConversation() {
-  // Optimistically reset UI
+  // Optimistically reset UI for a fresh chat session
   messages.value = [];
   isFirstMsg.value = true;
   currentConversationId.value = null;
@@ -34,11 +34,11 @@ async function createNewConversation() {
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    // Expecting { msg: 'success', data: { id: <number> } }
-    const newId = res.data?.data?.id;
-    if (newId) {
-      conversationIds.value.push(newId);
-      currentConversationId.value = newId;
+    // Expecting { msg: 'success', data: { id, title } }
+    const newConv = res.data?.data;
+    if (newConv?.id) {
+      conversations.value.unshift(newConv);
+      currentConversationId.value = newConv.id;
     }
   } catch (err) {
     // If the request fails, we simply log the error; the UI already reset
@@ -54,7 +54,7 @@ async function getConversations() {
     const res = await axios.get(`/api/conversation`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    conversationIds.value = res.data;
+    conversations.value = res.data?.data || [];
   } catch (err) {
     console.error(err);
     router.push('/login');
@@ -67,7 +67,8 @@ async function getMessagesByConversation(conversationId) {
     const res = await axios.get(`/api/conversation/message?conversationId=${conversationId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    messages.value = res.data;
+    messages.value = res.data?.data || [];
+    currentConversationId.value = conversationId;
   } catch (err) {
     console.error(err);
   }
@@ -88,15 +89,23 @@ async function sendMessage() {
   try {
     const res = await axios.post(
       '/api/chat',
-      { message: toSend },
+      { message: toSend, conversationId: currentConversationId.value },
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    messages.value.push({
-      content: res.data,
-      ai_reply: res.data,
-      timestamp: new Date().toISOString(),
-    });
+    const { data } = res.data;
+    if (data) {
+      // Update the last message (user) with the AI reply
+      const lastMsg = messages.value[messages.value.length - 1];
+      if (lastMsg && !lastMsg.ai_reply) {
+        lastMsg.ai_reply = data.ai_reply;
+      }
+
+      // If we didn't have conversation yet, set it (first message scenario)
+      if (!currentConversationId.value && data.conversation_id) {
+        currentConversationId.value = data.conversation_id;
+      }
+    }
   } catch (err) {
     console.error(err);
     router.push('/login');
@@ -156,8 +165,9 @@ onMounted(() => {
         New Chat
       </button>
       <ul>
-        <li v-for="(conversation, idx) in conversations" :key="idx" class="mb-2 text-sm truncate" @click="getMessagesByConversation(conversation.id)">
-          {{ conversation.content }}
+        <li v-for="(conversation, idx) in conversations" :key="idx" class="mb-2 text-sm truncate cursor-pointer hover:bg-gray-700 p-2 rounded"
+          @click="getMessagesByConversation(conversation.id)">
+          {{ conversation.title || `Conversation #${conversation.id}` }}
         </li>
       </ul>
     </aside>

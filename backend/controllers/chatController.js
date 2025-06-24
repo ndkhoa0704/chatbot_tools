@@ -52,7 +52,6 @@ function ChatController() {
         createConversation: async (req, res) => {
             try {
                 const conversation = await chatService.createConversation(req.user.id);
-                console.log(conversation);
                 res.json({ msg: 'success', data: conversation });
             } catch (err) {
                 logger.error('ChatController.createConversation - ', err.stack);
@@ -60,15 +59,26 @@ function ChatController() {
             }
         },
         chat: async (req, res) => {
-            const { message, conversationId } = req.body;
+            let { message, conversationId } = req.body;
             if (!message) return res.status(400).json({ message: 'Message is required' });
+
+            // When no conversation provided, create one implicitly
+            if (!conversationId) {
+                try {
+                    const newConv = await chatService.createConversation(req.user.id);
+                    conversationId = newConv.id;
+                } catch (err) {
+                    logger.error('ChatController.chat - failed to create conversation', err);
+                    return res.status(500).json({ message: 'Database error' });
+                }
+            }
+
             const aiReply = await SELF.fn.getAIReply(message);
             try {
                 const saved = await chatService.saveMessage(req.user.id, message, aiReply, conversationId);
-                return res.json({ msg: 'success', data: saved });
+                return res.json({ msg: 'success', data: { ...saved, conversation_id: conversationId } });
             } catch (err) {
                 logger.error(err);
-                console.log(err);
                 res.status(500).json({ message: 'Database error' });
             }
         },
@@ -85,8 +95,7 @@ function ChatController() {
         getConversationByUser: async (req, res) => {
             try {
                 const data = await chatService.getConversationByUser(req.user.id);
-                console.log(data);
-                res.json({ msg: 'success', data: data });
+                res.json({ msg: 'success', data });
             } catch (err) {
                 logger.error(err);
                 res.status(500).json({ message: 'Database error' });
