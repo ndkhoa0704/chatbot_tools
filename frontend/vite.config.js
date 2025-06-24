@@ -17,6 +17,9 @@ export default defineConfig(({ mode }) => {
           target: 'https://chatbot.koanguyn.org',
           changeOrigin: true
         }
+      },
+      hmr: {
+        clientPort: 443
       }
     }
   };
