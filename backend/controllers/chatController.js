@@ -7,18 +7,15 @@ const { db } = require('../utils/db');
 function ChatController() {
     const SELF = {
         fn: {
-            // getAIReply: async (message) => {
-            //     logger.info(SELF.var.model)
-            //     const completion = await SELF.var.client.chat.completions.create({
-            //         model: SELF.var.model,
-            //         messages: [
-            //             { role: 'assistant', content: message },
-            //         ],
-            //     });
-            //     return completion.choices[0].message.content;
-            // }
             getAIReply: async (message) => {
-                return "This is a mock AI reply";
+                logger.info(SELF.var.model)
+                const completion = await SELF.var.client.chat.completions.create({
+                    model: SELF.var.model,
+                    messages: [
+                        { role: 'assistant', content: message },
+                    ],
+                });
+                return completion.choices[0].message.content;
             }
         },
         var: {
