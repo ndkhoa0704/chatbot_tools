@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy: {
         '/api': {
-          target: 'https://chatbot.koanguyn.org',
+          target: 'https://chatbot.koanguyn.org/api',
           changeOrigin: true
         }
       },
