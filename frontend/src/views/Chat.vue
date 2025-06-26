@@ -189,7 +189,7 @@ onMounted(() => {
           </div>
           <div v-if="msg.ai_reply" class="bg-white p-3 rounded shadow">
             <span class="font-semibold">AI:</span>
-            <div v-html="markdownToHtml(msg.ai_reply)" />
+            <div v-html="markdownToHtml(msg.ai_reply)"></div>
           </div>
         </div>
       </div>
