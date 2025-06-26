@@ -7,5 +7,6 @@ router.post('/chat', authenticateToken, ChatController.chat);
 router.get('/conversation/message', authenticateToken, ChatController.getMessagesByConversation);
 router.get('/conversation', authenticateToken, ChatController.getConversationByUser);
 router.post('/conversation', authenticateToken, ChatController.createConversation);
+router.delete('/conversation/:id', authenticateToken, ChatController.deleteConversation);
 
 module.exports = router; 

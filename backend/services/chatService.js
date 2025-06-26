@@ -54,6 +54,38 @@ function ChatService() {
                     resolve(rows);
                 });
             });
+        },
+        deleteConversation: async (conversationId, userId) => {
+            /**
+             * Deletes a conversation that belongs to the given user along with all of its messages.
+             * If the conversation does not belong to the user, no rows will be removed and the promise resolves false.
+             */
+            return new Promise((resolve, reject) => {
+                db.serialize(() => {
+                    // Ensure the conversation belongs to the user first
+                    db.get('SELECT id FROM conversations WHERE id = ? AND user_id = ?', [conversationId, userId], (err, row) => {
+                        if (err) return reject(err);
+                        if (!row) return resolve(false); // not found or not owned by user
+
+                        // wrap deletes in a transaction for consistency
+                        db.run('BEGIN TRANSACTION');
+                        db.run('DELETE FROM messages WHERE conversation_id = ?', [conversationId], (err) => {
+                            if (err) {
+                                db.run('ROLLBACK');
+                                return reject(err);
+                            }
+                            db.run('DELETE FROM conversations WHERE id = ? AND user_id = ?', [conversationId, userId], (err2) => {
+                                if (err2) {
+                                    db.run('ROLLBACK');
+                                    return reject(err2);
+                                }
+                                db.run('COMMIT');
+                                resolve(true);
+                            });
+                        });
+                    });
+                });
+            });
         }
     }
 }

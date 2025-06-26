@@ -96,6 +96,17 @@ function ChatController() {
                 logger.error(err);
                 res.status(500).json({ message: 'Database error' });
             }
+        },
+        deleteConversation: async (req, res) => {
+            try {
+                const { id } = req.params;
+                const success = await chatService.deleteConversation(id, req.user.id);
+                if (!success) return res.status(404).json({ message: 'Conversation not found' });
+                res.json({ msg: 'success' });
+            } catch (err) {
+                logger.error('ChatController.deleteConversation - ', err.stack);
+                res.status(500).json({ message: 'Database error' });
+            }
         }
     }
 }

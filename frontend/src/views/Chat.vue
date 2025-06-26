@@ -119,6 +119,29 @@ async function sendMessage() {
   }
 }
 
+// NEW: delete conversation
+async function deleteConversation(conversationId, e) {
+  if (e) e.stopPropagation();
+  const confirmDelete = window.confirm('Are you sure you want to delete this chat?');
+  if (!confirmDelete) return;
+  try {
+    await axios.delete(`/api/conversation/${conversationId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    // Remove from local list
+    conversations.value = conversations.value.filter(c => c.id !== conversationId);
+    // If currently open conversation is deleted, reset
+    if (currentConversationId.value === conversationId) {
+      currentConversationId.value = null;
+      messages.value = [];
+      isFirstMsg.value = true;
+    }
+  } catch (err) {
+    console.error(err);
+    router.push('/login');
+  }
+}
+
 onMounted(() => {
   getConversations();
 });
@@ -172,9 +195,19 @@ onMounted(() => {
         New Chat
       </button>
       <ul>
-        <li v-for="(conversation, idx) in conversations" :key="idx" class="mb-2 text-sm truncate cursor-pointer hover:bg-gray-700 p-2 rounded"
+        <li v-for="(conversation, idx) in conversations" :key="idx" class="mb-2 text-sm flex items-center justify-between hover:bg-gray-700 p-2 rounded cursor-pointer"
           @click="getMessagesByConversation(conversation.id)">
-          {{ conversation.title || `Conversation #${conversation.id}` }}
+          <span class="text-sm truncate mr-2">{{ conversation.title || `Conversation #${conversation.id}` }}</span>
+          <button @click.stop="deleteConversation(conversation.id, $event)" aria-label="Delete conversation" class="text-red-500 hover:text-red-600">
+            <!-- trash icon -->
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6l-1 14H6L5 6"></path>
+              <path d="M10 11v6"></path>
+              <path d="M14 11v6"></path>
+            </svg>
+          </button>
         </li>
       </ul>
     </aside>
