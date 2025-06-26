@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
+import MarkdownIt from 'markdown-it';
 
 const router = useRouter();
 const token = localStorage.getItem('token');
@@ -19,6 +20,12 @@ const isFirstMsg = ref(true);
 
 // NEW: state for mobile sidebar toggle
 const sidebarOpen = ref(false);
+
+const md = new MarkdownIt({ linkify: true, breaks: true });
+
+function markdownToHtml(text) {
+  return md.render(text || '');
+}
 
 // NEW: create conversation
 async function createNewConversation() {
@@ -181,7 +188,8 @@ onMounted(() => {
             <span class="font-semibold">You:</span> {{ msg.content }}
           </div>
           <div v-if="msg.ai_reply" class="bg-white p-3 rounded shadow">
-            <span class="font-semibold">AI:</span> {{ msg.ai_reply }}
+            <span class="font-semibold">AI:</span>
+            <div v-html="markdownToHtml(msg.ai_reply)" />
           </div>
         </div>
       </div>

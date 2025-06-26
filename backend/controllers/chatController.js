@@ -8,7 +8,6 @@ function ChatController() {
     const SELF = {
         fn: {
             getAIReply: async (message) => {
-                logger.info(SELF.var.model)
                 const completion = await SELF.var.client.chat.completions.create({
                     model: SELF.var.model,
                     messages: [
