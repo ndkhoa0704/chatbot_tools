@@ -21,7 +21,7 @@ function ChatController() {
             client: new OpenAI({
                 apiKey: process.env.OPENAI_API_KEY,
             }),
-            model: "gpt-4.1",
+            model: "gpt-4o-mini",
         }
     }
     return {
