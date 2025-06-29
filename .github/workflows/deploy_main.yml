@@ -11,11 +11,5 @@ jobs:
     runs-on: ubuntu-latest
   
     steps:
-      - name: Sanity-check secret presence
-        run: echo "Key length = ${#KEY_WEBHOOK}"
-        env:
-          KEY_WEBHOOK: ${{ secrets.KEY_WEBHOOK }}
-      - name: Trigger server deployment webhook
-        uses: distributhor/workflow-webhook@v3
-        with:
-          webhook_url: 'https://chatbot.koanguyn.org/webhook/deploy?key=${{ secrets.KEY_WEBHOOK }}' # Replace with your webhook URL
+      - name: Deploy
+        run: curl -X POST https://chatbot.koanguyn.org/webhook/deploy?key=${{ secrets.KEY_WEBHOOK }}
