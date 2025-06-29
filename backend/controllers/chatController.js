@@ -2,28 +2,25 @@ const chatService = require('../services/chatService');
 const OpenAI = require('openai');
 const logger = require('../utils/logger');
 const { db } = require('../utils/db');
-
+const prompts = require('../prompts');
 
 function ChatController() {
     const SELF = {
-        fn: {
-            getAIReply: async (message) => {
-                const completion = await SELF.var.client.chat.completions.create({
-                    model: SELF.var.model,
-                    messages: [
-                        { role: 'assistant', content: message },
-                    ],
-                });
-                return completion.choices[0].message.content;
-            }
+        client: new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY,
+        }),
+        model: "gpt-4o-mini",
+        getAIReply: async (message) => {
+            const response = await SELF.client.responses.create({
+                model: SELF.model,
+                instructions: prompts.perplexity.prompt,
+                input: message,
+                tools: [{ type: "web_search_preview" }],
+            });
+            return response.output_text;
         },
-        var: {
-            client: new OpenAI({
-                apiKey: process.env.OPENAI_API_KEY,
-            }),
-            model: "gpt-4o-mini",
-        }
     }
+
     return {
         updateConversationTitle: async (req, res) => {
             const { message, conversationId } = req.body;
@@ -37,7 +34,7 @@ function ChatController() {
             ${message}
             `
             try {
-                const title = await SELF.fn.getAIReply(instruction);
+                const title = await SELF.getAIReply(instruction);
                 db.run('UPDATE conversations SET title = ? WHERE id = ?', [title, conversationId]);
             } catch (err) {
                 logger.error('ChatController.updateConversationTitle - ', err.stack);
@@ -56,21 +53,20 @@ function ChatController() {
         },
         chat: async (req, res) => {
             let { message, conversationId } = req.body;
-            if (!message) return res.status(400).json({ message: 'Message is required' });
-
-            // When no conversation provided, create one implicitly
-            if (!conversationId) {
-                try {
-                    const newConv = await chatService.createConversation(req.user.id);
-                    conversationId = newConv.id;
-                } catch (err) {
-                    logger.error('ChatController.chat - failed to create conversation', err);
-                    return res.status(500).json({ message: 'Database error' });
-                }
-            }
-
-            const aiReply = await SELF.fn.getAIReply(message);
             try {
+                if (!message) return res.status(400).json({ message: 'Message is required' });
+
+                // When no conversation provided, create one implicitly
+                if (!conversationId) {
+                    try {
+                        const newConv = await chatService.createConversation(req.user.id);
+                        conversationId = newConv.id;
+                    } catch (err) {
+                        logger.error('ChatController.chat - failed to create conversation', err);
+                        return res.status(500).json({ message: 'Database error' });
+                    }
+                }
+                const aiReply = await SELF.getAIReply(message);
                 const saved = await chatService.saveMessage(req.user.id, message, aiReply, conversationId);
                 return res.json({ msg: 'success', data: { ...saved, conversation_id: conversationId } });
             } catch (err) {

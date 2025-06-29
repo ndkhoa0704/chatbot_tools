@@ -4,7 +4,12 @@ import vue from '@vitejs/plugin-vue'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   // Load env variables for the current mode.
-  const env = loadEnv(mode, process.cwd() + '/../', '')
+  const env = loadEnv(mode, process.cwd() + '/', '')
+  // Provide a sensible default if the environment variable is missing. This prevents
+  // `undefined` from being passed to the proxy which ultimately causes Node's URL
+  // parser to attempt `protocol.split(':')`, leading to a runtime error.
+  const apiUrl = env.VITE_API_URL || 'http://localhost:3000'
+  console.log('Using API URL:', apiUrl)
   return {
     plugins: [vue()],
     build: {
@@ -16,7 +21,7 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy: {
         '/api': {
-          target: 'https://chatbot.koanguyn.org/api',
+          target: apiUrl,
           changeOrigin: true
         }
       },
