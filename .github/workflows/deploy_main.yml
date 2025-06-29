@@ -12,6 +12,7 @@ jobs:
   
     steps:
       - name: Trigger server deployment webhook
+        run: echo "Key length = ${#KEY_WEBHOOK}"
         uses: distributhor/workflow-webhook@v3
         with:
           webhook_url: 'https://chatbot.koanguyn.org/webhook/deploy?key=${{ secrets.KEY_WEBHOOK }}' # Replace with your webhook URL
