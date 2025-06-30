@@ -3,6 +3,7 @@ const OpenAI = require('openai');
 const logger = require('../utils/logger');
 const { db } = require('../utils/db');
 const prompts = require('../prompts');
+const { v4: uuidv4 } = require('uuid');
 
 function ChatController() {
     const SELF = {
@@ -44,7 +45,7 @@ function ChatController() {
         },
         createConversation: async (req, res) => {
             try {
-                const conversation = await chatService.createConversation(req.user.id);
+                const conversation = await chatService.createConversation(uuidv4(), req.user.id);
                 res.json({ msg: 'success', data: conversation });
             } catch (err) {
                 logger.error('ChatController.createConversation - ', err.stack);
@@ -59,16 +60,25 @@ function ChatController() {
                 // When no conversation provided, create one implicitly
                 if (!conversationId) {
                     try {
-                        const newConv = await chatService.createConversation(req.user.id);
+                        const newConv = await chatService.createConversation(uuidv4(), req.user.id);
                         conversationId = newConv.id;
                     } catch (err) {
                         logger.error('ChatController.chat - failed to create conversation', err);
                         return res.status(500).json({ message: 'Database error' });
                     }
                 }
+                const chatId = uuidv4();
                 const aiReply = await SELF.getAIReply(message);
-                const saved = await chatService.saveMessage(req.user.id, message, aiReply, conversationId);
-                return res.json({ msg: 'success', data: { ...saved, conversation_id: conversationId } });
+                res.json({
+                    msg: 'success',
+                    data: {
+                        id: chatId,
+                        conversationId,
+                        ai_reply: aiReply,
+                        content: message
+                    }
+                });
+                await chatService.saveMessage(chatId, req.user.id, message, aiReply, conversationId);
             } catch (err) {
                 logger.error(err);
                 res.status(500).json({ message: 'Database error' });

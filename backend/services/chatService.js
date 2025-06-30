@@ -3,13 +3,13 @@ const { db } = require('../utils/db');
 function ChatService() {
     const SELF = {}
     return {
-        createConversation: async (userId) => {
+        createConversation: async (id, userId) => {
             /**
              * Creates a new conversation for the given user and returns the full
              * conversation object { id, user_id, title }.
              */
             return new Promise((resolve, reject) => {
-                db.run('INSERT INTO conversations (user_id) VALUES (?)', [userId], function (err) {
+                db.run('INSERT INTO conversations (id,user_id) VALUES (?,?)', [id, userId], function (err) {
                     if (err) return reject(err);
                     // `this` refers to the statement context where lastID is the inserted row id
                     const newId = this.lastID;
@@ -20,11 +20,11 @@ function ChatService() {
                 });
             });
         },
-        saveMessage: async (userId, content, aiReply, conversationId) => {
+        saveMessage: async (id, userId, content, aiReply, conversationId) => {
             return new Promise((resolve, reject) => {
                 db.run(
-                    'INSERT INTO messages (user_id, content, ai_reply, conversation_id) VALUES (?, ?, ?, ?)',
-                    [userId, content, aiReply, conversationId],
+                    'INSERT INTO messages (id, user_id, content, ai_reply, conversation_id) VALUES (?, ?, ?, ?, ?)',
+                    [id, userId, content, aiReply, conversationId],
                     function (err) {
                         if (err) return reject(err);
                         resolve({ id: this.lastID, content, ai_reply: aiReply });
