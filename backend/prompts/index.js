@@ -1,3 +1,5 @@
+const fs = require('fs').promises
+
 module.exports = {
-    perplexity: require('./perplexity'),
+    perplexity: await fs.readFile('./perplexity.txt', 'utf8'),
 }
