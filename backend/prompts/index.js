@@ -1,5 +1,7 @@
-const fs = require('fs').promises
+const fs = require('fs')
+
+const perplexity = fs.readFileSync(__dirname + '/perplexity.txt', 'utf8')
 
 module.exports = {
-    perplexity: await fs.readFile('./perplexity.txt', 'utf8'),
+    perplexity,
 }
