@@ -21,7 +21,7 @@ function init(cb) {
         password_hash TEXT NOT NULL
         );`,
         `CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id TEXT PRIMARY KEY,
         user_id INTEGER NOT NULL,
         content TEXT NOT NULL,
         ai_reply TEXT NOT NULL,
@@ -31,7 +31,7 @@ function init(cb) {
         FOREIGN KEY (conversation_id) REFERENCES conversations(id)
         );`,
         `CREATE TABLE IF NOT EXISTS conversations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id TEXT PRIMARY KEY,
         user_id INTEGER NOT NULL,
         title TEXT NULL,
         FOREIGN KEY (user_id) REFERENCES users(id)

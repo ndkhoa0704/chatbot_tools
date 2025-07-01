@@ -5,20 +5,30 @@ const { db } = require('../utils/db');
 const prompts = require('../prompts');
 const { v4: uuidv4 } = require('uuid');
 
+
 function ChatController() {
     const SELF = {
-        client: new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
-        }),
-        model: "gpt-4o-mini",
+        client: (() => {
+            if (process.env.BASE_LM_URL) {
+                return new OpenAI({
+                    baseURL: process.env.BASE_LM_URL,
+                })
+            }
+            return new OpenAI({
+                apiKey: process.env.OPENAI_API_KEY,
+            })
+        })(),
+        model: process.env.LM_MODEL || "phi4:latest",
         getAIReply: async (message) => {
-            const response = await SELF.client.responses.create({
+            const response = await SELF.client.chat.completions.create({
                 model: SELF.model,
-                instructions: prompts.perplexity.prompt,
-                input: message,
-                tools: [{ type: "web_search_preview" }],
+                messages: [
+                    { role: "system", content: prompts.perplexity },
+                    { role: "user", content: message },
+                ],
+                temperature: 0.7,
             });
-            return response.output_text;
+            return response.choices?.[0]?.message?.content?.trim();
         },
     }
 
@@ -38,7 +48,7 @@ function ChatController() {
                 const title = await SELF.getAIReply(instruction);
                 db.run('UPDATE conversations SET title = ? WHERE id = ?', [title, conversationId]);
             } catch (err) {
-                logger.error('ChatController.updateConversationTitle - ', err.stack);
+                logger.error(`ChatController.updateConversationTitle - ${err.stack}`);
                 res.status(500).json({ message: 'Database error' });
             }
             res.json({ msg: 'success', data: title });
@@ -48,7 +58,7 @@ function ChatController() {
                 const conversation = await chatService.createConversation(uuidv4(), req.user.id);
                 res.json({ msg: 'success', data: conversation });
             } catch (err) {
-                logger.error('ChatController.createConversation - ', err.stack);
+                logger.error(`ChatController.createConversation - ${err.stack}`);
                 res.status(500).json({ message: 'Database error' });
             }
         },
@@ -60,10 +70,10 @@ function ChatController() {
                 // When no conversation provided, create one implicitly
                 if (!conversationId) {
                     try {
-                        const newConv = await chatService.createConversation(uuidv4(), req.user.id);
-                        conversationId = newConv.id;
+                        conversationId = uuidv4()
+                        await chatService.createConversation(conversationId, req.user.id);
                     } catch (err) {
-                        logger.error('ChatController.chat - failed to create conversation', err);
+                        logger.error(`ChatController.chat - failed to create conversation - ${err.stack}`);
                         return res.status(500).json({ message: 'Database error' });
                     }
                 }
@@ -80,7 +90,7 @@ function ChatController() {
                 });
                 await chatService.saveMessage(chatId, req.user.id, message, aiReply, conversationId);
             } catch (err) {
-                logger.error(err);
+                logger.error(`ChatController.chat - ${err.stack}`);
                 res.status(500).json({ message: 'Database error' });
             }
         },
@@ -110,7 +120,7 @@ function ChatController() {
                 if (!success) return res.status(404).json({ message: 'Conversation not found' });
                 res.json({ msg: 'success' });
             } catch (err) {
-                logger.error('ChatController.deleteConversation - ', err.stack);
+                logger.error(`ChatController.deleteConversation - ${err.stack}`);
                 res.status(500).json({ message: 'Database error' });
             }
         }
