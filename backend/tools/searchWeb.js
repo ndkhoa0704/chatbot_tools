@@ -8,6 +8,7 @@ const webSearch = tool({
     parameters: z.object({
         query: z.string().min(1).max(100).describe('The search query'),
     }),
+    type: 'function',
     execute: async ({ query }) => {
         const params = new URLSearchParams({
             q: 'how to calculate margin profit',
