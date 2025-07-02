@@ -4,7 +4,7 @@ const logger = require('../utils/logger');
 const { db } = require('../utils/db');
 const prompts = require('../prompts');
 const { v4: uuidv4 } = require('uuid');
-
+const { webSearch } = require('../tools/searchWeb');
 
 function ChatController() {
     const SELF = {
@@ -27,6 +27,7 @@ function ChatController() {
                     { role: "user", content: message },
                 ],
                 temperature: 0.7,
+                tools: [webSearch],
             });
             return response.choices?.[0]?.message?.content?.trim();
         },
