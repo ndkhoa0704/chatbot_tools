@@ -37,8 +37,7 @@ const webSearch = {
         return results.map(result => ({
             title: result.title,
             url: result.url,
-            content: result.text.slice(0, 1000), // take just the first 1000 characters
-            publishedDate: result.publishedDate,
+            content: result.description.slice(0, 1000), // take just the first 1000 characters
         }));
     },
 };
