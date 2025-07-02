@@ -1,17 +1,26 @@
-const { tool } = require('ai');
 const { z } = require('zod');
 
-
-
-const webSearch = tool({
-    description: 'Search the web for up-to-date information',
-    parameters: z.object({
-        query: z.string().min(1).max(100).describe('The search query'),
-    }),
-    type: 'function',
+const webSearch = {
+    type: "function",
+    function: {
+        name: "webSearch",
+        description: "Search the web for up-to-date information",
+        parameters: {
+            type: "object",
+            properties: {
+                query: {
+                    type: "string",
+                    description: "The search query",
+                    minLength: 1,
+                    maxLength: 100
+                }
+            },
+            required: ["query"]
+        }
+    },
     execute: async ({ query }) => {
         const params = new URLSearchParams({
-            q: 'how to calculate margin profit',
+            q: query,
             country: 'ALL'
         });
         const url = `https://api.search.brave.com/res/v1/web/search?${params}`
@@ -32,6 +41,6 @@ const webSearch = tool({
             publishedDate: result.publishedDate,
         }));
     },
-});
+};
 
 module.exports = { webSearch };

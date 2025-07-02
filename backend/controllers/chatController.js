@@ -28,8 +28,36 @@ function ChatController() {
                 ],
                 temperature: 0.7,
                 tools: [webSearch],
+                tool_choice: "auto",
             });
-            return response.choices?.[0]?.message?.content?.trim();
+            
+            const messageResponse = response.choices?.[0]?.message;
+            
+            // Check if the model wants to call a tool
+            if (messageResponse.tool_calls && messageResponse.tool_calls.length > 0) {
+                const toolCall = messageResponse.tool_calls[0];
+                
+                if (toolCall.function.name === 'webSearch') {
+                    const args = JSON.parse(toolCall.function.arguments);
+                    const searchResults = await webSearch.execute(args);
+                    
+                    // Send the tool results back to the model
+                    const secondResponse = await SELF.client.chat.completions.create({
+                        model: SELF.model,
+                        messages: [
+                            { role: "system", content: prompts.perplexity },
+                            { role: "user", content: message },
+                            { role: "assistant", content: null, tool_calls: [toolCall] },
+                            { role: "tool", content: JSON.stringify(searchResults), tool_call_id: toolCall.id }
+                        ],
+                        temperature: 0.7,
+                    });
+                    
+                    return secondResponse.choices?.[0]?.message?.content?.trim();
+                }
+            }
+            
+            return messageResponse?.content?.trim();
         },
     }
 
