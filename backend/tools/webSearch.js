@@ -1,5 +1,3 @@
-const { z } = require('zod');
-
 const webSearch = {
     type: "function",
     function: {
@@ -40,6 +38,6 @@ const webSearch = {
             content: result.description.slice(0, 1000), // take just the first 1000 characters
         }));
     },
-};
+}
 
-module.exports = { webSearch };
+module.exports = webSearch;

@@ -84,33 +84,88 @@ async function getMessagesByConversation(conversationId) {
 async function sendMessage() {
   if (!messageInput.value.trim()) return;
 
+  // Ensure we have an active conversation – if not, create one first
+  if (!currentConversationId.value) {
+    try {
+      const convRes = await axios.post(
+        '/api/conversation',
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const newConv = convRes.data?.data;
+      if (newConv?.id) {
+        currentConversationId.value = newConv.id;
+        conversations.value.unshift(newConv);
+      }
+    } catch (err) {
+      console.error('Failed to create conversation', err);
+      return;
+    }
+  }
+
+  // Add user message to UI and prepare placeholder for AI reply
   const userMessage = {
     content: messageInput.value,
     ai_reply: '',
     timestamp: new Date().toISOString(),
   };
   messages.value.push(userMessage);
+  const messageIndex = messages.value.length - 1;
+
   const toSend = messageInput.value;
   messageInput.value = '';
 
   try {
-    const res = await axios.post(
-      '/api/chat',
-      { message: toSend, conversationId: currentConversationId.value },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ message: toSend, conversationId: currentConversationId.value }),
+    });
 
-    const { data } = res.data;
-    if (data) {
-      // Update the last message (user) with the AI reply
-      const lastMsg = messages.value[messages.value.length - 1];
-      if (lastMsg && !lastMsg.ai_reply) {
-        lastMsg.ai_reply = data.ai_reply;
-      }
+    if (!response.ok || !response.body) {
+      throw new Error(`Network response was not ok (${response.status})`);
+    }
 
-      // If we didn't have conversation yet, set it (first message scenario)
-      if (!currentConversationId.value && data.conversation_id) {
-        currentConversationId.value = data.conversation_id;
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      let boundary;
+      // SSE events are separated by two newlines (\n\n)
+      while ((boundary = buffer.indexOf('\n\n')) !== -1) {
+        const rawEvent = buffer.slice(0, boundary).trim();
+        buffer = buffer.slice(boundary + 2);
+
+        // We only care about lines that start with "data:"
+        if (!rawEvent.startsWith('data:')) continue;
+        const dataStr = rawEvent.slice(5).trim();
+
+        if (dataStr === '[DONE]') {
+          // Stream finished
+          break;
+        }
+        if (dataStr === '[ERROR]') {
+          throw new Error('Server error during stream');
+        }
+
+        // Attempt to JSON-parse, fall back to string
+        let token;
+        try {
+          token = JSON.parse(dataStr);
+        } catch (_) {
+          token = dataStr;
+        }
+
+        // Append token to the AI reply field
+        messages.value[messageIndex].ai_reply += token;
       }
     }
   } catch (err) {

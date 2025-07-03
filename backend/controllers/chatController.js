@@ -4,7 +4,7 @@ const logger = require('../utils/logger');
 const { db } = require('../utils/db');
 const prompts = require('../prompts');
 const { v4: uuidv4 } = require('uuid');
-const { webSearch } = require('../tools/searchWeb');
+const tools = require('../tools');
 
 function ChatController() {
     const SELF = {
@@ -27,20 +27,21 @@ function ChatController() {
                     { role: "user", content: message },
                 ],
                 temperature: 0.7,
-                tools: [webSearch],
+                tools: Object.values(tools),
                 tool_choice: "auto",
+                stream: true,
             });
-            
+
             const messageResponse = response.choices?.[0]?.message;
-            
+
             // Check if the model wants to call a tool
             if (messageResponse.tool_calls && messageResponse.tool_calls.length > 0) {
                 const toolCall = messageResponse.tool_calls[0];
-                
-                if (toolCall.function.name === 'webSearch') {
+                const tool = tools[toolCall.function.name];
+                if (tool) {
                     const args = JSON.parse(toolCall.function.arguments);
-                    const searchResults = await webSearch.execute(args);
-                    
+                    const searchResults = await tool.execute(args);
+
                     // Send the tool results back to the model
                     const secondResponse = await SELF.client.chat.completions.create({
                         model: SELF.model,
@@ -52,11 +53,10 @@ function ChatController() {
                         ],
                         temperature: 0.7,
                     });
-                    
                     return secondResponse.choices?.[0]?.message?.content?.trim();
                 }
             }
-            
+
             return messageResponse?.content?.trim();
         },
     }
@@ -99,28 +99,79 @@ function ChatController() {
                 // When no conversation provided, create one implicitly
                 if (!conversationId) {
                     try {
-                        conversationId = uuidv4()
+                        conversationId = uuidv4();
                         await chatService.createConversation(conversationId, req.user.id);
                     } catch (err) {
                         logger.error(`ChatController.chat - failed to create conversation - ${err.stack}`);
                         return res.status(500).json({ message: 'Database error' });
                     }
                 }
+
                 const chatId = uuidv4();
-                const aiReply = await SELF.getAIReply(message);
-                res.json({
-                    msg: 'success',
-                    data: {
-                        id: chatId,
-                        conversationId,
-                        ai_reply: aiReply,
-                        content: message
-                    }
+
+                // Setup Server-Sent Events headers to begin streaming
+                res.writeHead(200, {
+                    'Content-Type': 'text/event-stream',
+                    'Cache-Control': 'no-cache',
+                    Connection: 'keep-alive',
                 });
+                if (typeof res.flushHeaders === 'function') res.flushHeaders();
+
+                // Helper to send SSE formatted data
+                const sendData = (data) => {
+                    try {
+                        res.write(`data: ${data}\n\n`);
+                    } catch (e) {
+                        logger.error(`ChatController.chat - streaming error: ${e.message}`);
+                    }
+                };
+
+                let aiReply = '';
+                try {
+                    const stream = await SELF.client.chat.completions.create({
+                        model: SELF.model,
+                        messages: [
+                            { role: 'system', content: prompts.perplexity },
+                            { role: 'user', content: message },
+                        ],
+                        temperature: 0.7,
+                        tools: Object.values(tools),
+                        tool_choice: 'auto',
+                        stream: true,
+                    });
+
+                    for await (const chunk of stream) {
+                        const content = chunk.choices?.[0]?.delta?.content;
+                        if (content) {
+                            aiReply += content;
+                            sendData(JSON.stringify(content));
+                        }
+                    }
+
+                    // Signal completion to the client
+                    sendData('[DONE]');
+                    res.end();
+                } catch (streamErr) {
+                    // If OpenAI streaming fails, notify client and log the error
+                    logger.error(`ChatController.chat - stream error: ${streamErr.stack}`);
+                    sendData('[ERROR]');
+                    return res.end();
+                }
+
+                // Persist the full message once streaming is finished
                 await chatService.saveMessage(chatId, req.user.id, message, aiReply, conversationId);
             } catch (err) {
                 logger.error(`ChatController.chat - ${err.stack}`);
-                res.status(500).json({ message: 'Database error' });
+                // If headers not sent yet, we can still send a JSON error response
+                if (!res.headersSent) {
+                    res.status(500).json({ message: 'Database error' });
+                } else {
+                    // Otherwise, attempt to stream an error flag and terminate connection
+                    try {
+                        res.write('data: [ERROR]\n\n');
+                    } catch (_) { /* ignore */ }
+                    res.end();
+                }
             }
         },
         getMessagesByConversation: async (req, res) => {
