@@ -34,6 +34,7 @@ function init(cb) {
         id TEXT PRIMARY KEY,
         user_id INTEGER NOT NULL,
         title TEXT NULL,
+        has_no_msg INTEGER DEFAULT 1,
         FOREIGN KEY (user_id) REFERENCES users(id)
         );`,
     ];

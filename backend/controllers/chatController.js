@@ -35,6 +35,7 @@ function ChatController() {
             const messageResponse = response.choices?.[0]?.message;
 
             // Check if the model wants to call a tool
+            console.log('tool_calls', messageResponse.tool_calls)
             if (messageResponse.tool_calls && messageResponse.tool_calls.length > 0) {
                 const toolCall = messageResponse.tool_calls[0];
                 const tool = tools[toolCall.function.name];
@@ -62,29 +63,10 @@ function ChatController() {
     }
 
     return {
-        updateConversationTitle: async (req, res) => {
-            const { message, conversationId } = req.body;
-            const instruction = `
-            You are a helpful assistant that generates a title for a conversation based on the message.
-            The title should be a single sentence that captures the essence of the conversation.
-            The title should be no more than 10 words.
-            The title should be in the same language as the conversation.
-
-            Here is the message:
-            ${message}
-            `
-            try {
-                const title = await SELF.getAIReply(instruction);
-                db.run('UPDATE conversations SET title = ? WHERE id = ?', [title, conversationId]);
-            } catch (err) {
-                logger.error(`ChatController.updateConversationTitle - ${err.stack}`);
-                res.status(500).json({ message: 'Database error' });
-            }
-            res.json({ msg: 'success', data: title });
-        },
         createConversation: async (req, res) => {
             try {
                 const conversation = await chatService.createConversation(uuidv4(), req.user.id);
+                console.log('conversation', conversation)
                 res.json({ msg: 'success', data: conversation });
             } catch (err) {
                 logger.error(`ChatController.createConversation - ${err.stack}`);
@@ -92,19 +74,13 @@ function ChatController() {
             }
         },
         chat: async (req, res) => {
-            let { message, conversationId } = req.body;
+            let { message, conversationId, hasNoMsg } = req.body;
             try {
                 if (!message) return res.status(400).json({ message: 'Message is required' });
 
                 // When no conversation provided, create one implicitly
                 if (!conversationId) {
-                    try {
-                        conversationId = uuidv4();
-                        await chatService.createConversation(conversationId, req.user.id);
-                    } catch (err) {
-                        logger.error(`ChatController.chat - failed to create conversation - ${err.stack}`);
-                        return res.status(500).json({ message: 'Database error' });
-                    }
+                    return res.status(400).json({ message: 'Conversation ID is required' });
                 }
 
                 const chatId = uuidv4();
@@ -140,16 +116,64 @@ function ChatController() {
                         stream: true,
                     });
 
+                    // Collect any tool calls that appear in the streamed deltas
+                    const collectedToolCalls = [];
+
                     for await (const chunk of stream) {
-                        const content = chunk.choices?.[0]?.delta?.content;
-                        if (content) {
-                            aiReply += content;
-                            sendData(JSON.stringify(content));
+                        const delta = chunk.choices?.[0]?.delta || {};
+
+                        // Stream normal assistant content
+                        if (delta.content) {
+                            aiReply += delta.content;
+                            sendData(JSON.stringify(delta.content));
+                        }
+
+                        // Buffer tool call information for later use (OpenAI may send this piecemeal)
+                        if (delta.tool_calls) {
+                            collectedToolCalls.push(...delta.tool_calls);
                         }
                     }
 
-                    // Signal completion to the client
+                    // Signal the end of the first assistant streaming phase
                     sendData('[DONE]');
+                    console.log('collectedToolCalls', collectedToolCalls)
+                    // If the assistant requested a tool, execute it and send back a follow-up answer
+                    if (collectedToolCalls.length > 0) {
+                        const toolCall = collectedToolCalls[0]; // Hiện tại chỉ hỗ trợ 1 tool call
+                        const toolImpl = tools[toolCall.function.name];
+                        if (toolImpl) {
+                            let parsedArgs = {};
+                            try { parsedArgs = JSON.parse(toolCall.function.arguments || '{}'); } catch (_) {}
+
+                            // Thực thi tool
+                            const toolResult = await toolImpl.execute(parsedArgs);
+
+                            // Gọi lại model cùng kết quả tool và stream câu trả lời kế tiếp
+                            const followStream = await SELF.client.chat.completions.create({
+                                model: SELF.model,
+                                messages: [
+                                    { role: 'system', content: prompts.perplexity },
+                                    { role: 'user', content: message },
+                                    { role: 'assistant', content: null, tool_calls: collectedToolCalls },
+                                    { role: 'tool', content: JSON.stringify(toolResult), tool_call_id: toolCall.id },
+                                ],
+                                temperature: 0.7,
+                                stream: true,
+                            });
+
+                            for await (const chunk of followStream) {
+                                const delta = chunk.choices?.[0]?.delta || {};
+                                if (delta.content) {
+                                    aiReply += delta.content;
+                                    sendData(JSON.stringify(delta.content));
+                                }
+                            }
+
+                            // Đánh dấu hoàn tất giai đoạn thứ 2
+                            sendData('[DONE]');
+                        }
+                    }
+
                     res.end();
                 } catch (streamErr) {
                     // If OpenAI streaming fails, notify client and log the error

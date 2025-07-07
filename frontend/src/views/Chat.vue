@@ -16,6 +16,7 @@ const messages = ref([]);
 const conversations = ref([]);
 const currentConversationId = ref(null);
 
+
 const isFirstMsg = ref(true);
 
 // NEW: state for mobile sidebar toggle
@@ -32,8 +33,9 @@ async function createNewConversation() {
   // Optimistically reset UI for a fresh chat session
   messages.value = [];
   isFirstMsg.value = true;
-  currentConversationId.value = null;
-
+  if (currentConversationId.value && currentConversationId.value.has_no_msg) {
+    return
+  }
   try {
     const res = await axios.post(
       '/api/conversation',
@@ -93,6 +95,7 @@ async function sendMessage() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const newConv = convRes.data?.data;
+      console.log('newConv', newConv)
       if (newConv?.id) {
         currentConversationId.value = newConv.id;
         conversations.value.unshift(newConv);
@@ -250,10 +253,12 @@ onMounted(() => {
         New Chat
       </button>
       <ul>
-        <li v-for="(conversation, idx) in conversations" :key="idx" class="mb-2 text-sm flex items-center justify-between hover:bg-gray-700 p-2 rounded cursor-pointer"
+        <li v-for="(conversation, idx) in conversations" :key="idx"
+          class="mb-2 text-sm flex items-center justify-between hover:bg-gray-700 p-2 rounded cursor-pointer"
           @click="getMessagesByConversation(conversation.id)">
           <span class="text-sm truncate mr-2">{{ conversation.title || `Conversation #${conversation.id}` }}</span>
-          <button @click.stop="deleteConversation(conversation.id, $event)" aria-label="Delete conversation" class="text-red-500 hover:text-red-600">
+          <button @click.stop="deleteConversation(conversation.id, $event)" aria-label="Delete conversation"
+            class="text-red-500 hover:text-red-600">
             <!-- trash icon -->
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
               stroke-linecap="round" stroke-linejoin="round">

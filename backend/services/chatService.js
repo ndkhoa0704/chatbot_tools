@@ -12,8 +12,8 @@ function ChatService() {
                 db.run('INSERT INTO conversations (id,user_id) VALUES (?,?)', [id, userId], function (err) {
                     if (err) return reject(err);
                     // `this` refers to the statement context where lastID is the inserted row id
-                    const newId = this.lastID;
-                    db.get('SELECT * FROM conversations WHERE id = ?', [newId], (err, row) => {
+                    console.log('this', this)
+                    db.get('SELECT * FROM conversations WHERE id = ?', [id], (err, row) => {
                         if (err) return reject(err);
                         resolve(row);
                     });
