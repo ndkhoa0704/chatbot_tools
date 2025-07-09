@@ -154,7 +154,7 @@ function ChatController() {
                                 messages: [
                                     { role: 'system', content: prompts.perplexity },
                                     { role: 'user', content: message },
-                                    { role: 'assistant', content: null, tool_calls: collectedToolCalls },
+                                    { role: 'assistant', content: '', tool_calls: collectedToolCalls },
                                     { role: 'tool', content: JSON.stringify(toolResult), tool_call_id: toolCall.id },
                                 ],
                                 temperature: 0.7,
