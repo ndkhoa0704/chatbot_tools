@@ -116,8 +116,9 @@ function ChatController() {
                         stream: true,
                     });
 
-                    // Collect any tool calls that appear in the streamed deltas
-                    const collectedToolCalls = [];
+                    // `toolCallBuffers` collects partial tool_call chunks keyed by their id so
+                    // we can assemble the complete function call when the stream finishes.
+                    const toolCallBuffers = {};
 
                     for await (const chunk of stream) {
                         const delta = chunk.choices?.[0]?.delta || {};
@@ -128,11 +129,32 @@ function ChatController() {
                             sendData(JSON.stringify(delta.content));
                         }
 
-                        // Buffer tool call information for later use (OpenAI may send this piecemeal)
+                        // Handle incremental tool_call payloads
                         if (delta.tool_calls) {
-                            collectedToolCalls.push(...delta.tool_calls);
+                            for (const tc of delta.tool_calls) {
+                                // Initialise buffer for this tool call if not present
+                                if (!toolCallBuffers[tc.id]) {
+                                    toolCallBuffers[tc.id] = {
+                                        id: tc.id,
+                                        type: tc.type,
+                                        function: {
+                                            name: tc.function.name,
+                                            // accumulate arguments in a single string
+                                            arguments: ''
+                                        }
+                                    };
+                                }
+
+                                // Concatenate streamed arguments (may arrive in pieces)
+                                if (typeof tc.function.arguments === 'string') {
+                                    toolCallBuffers[tc.id].function.arguments += tc.function.arguments;
+                                }
+                            }
                         }
                     }
+
+                    // Convert dictionary to array for convenience in later processing
+                    const collectedToolCalls = Object.values(toolCallBuffers);
 
                     // Signal the end of the first assistant streaming phase
                     sendData('[DONE]');
@@ -140,32 +162,71 @@ function ChatController() {
                     // If the assistant requested a tool, execute it and send back a follow-up answer
                     if (collectedToolCalls.length > 0) {
                         const toolCall = collectedToolCalls[0]; // Hiện tại chỉ hỗ trợ 1 tool call
+                        console.log('collectedToolCalls[1].function.arguments', collectedToolCalls[1].function.arguments)
+                        toolCall.function.arguments = JSON.parse(collectedToolCalls[1].function.arguments);
                         const toolImpl = tools[toolCall.function.name];
                         if (toolImpl) {
                             let parsedArgs = {};
-                            try { parsedArgs = JSON.parse(toolCall.function.arguments || '{}'); } catch (_) {}
+                            try { parsedArgs = toolCall.function.arguments || '{}'; } catch (_) { }
+                            console.log('parsedArgs', parsedArgs)
 
                             // Thực thi tool
                             const toolResult = await toolImpl.execute(parsedArgs);
 
+                            console.log('toolResult', toolResult)
+
                             // Gọi lại model cùng kết quả tool và stream câu trả lời kế tiếp
+                            const fs = require('fs');
+                            const path = require('path');
+                            
+                            const logData = JSON.stringify({
+                                messages: [
+                                    { role: 'system', content: prompts.perplexity },
+                                    { role: 'user', content: message },
+                                    { role: 'assistant', content: '', tool_calls: toolCall },
+                                    { role: 'tool', content: JSON.stringify(toolResult), tool_call_id: toolCall.id },
+                                ],
+                            }, null, 2);
+                            
+                            const logFilePath = path.join(__dirname, '../logs/chat_messages.log');
+                            fs.appendFileSync(logFilePath, `\n[${new Date().toISOString()}] Message Log:\n${logData}\n`);
+                            console.log('message', logData);
                             const followStream = await SELF.client.chat.completions.create({
                                 model: SELF.model,
                                 messages: [
                                     { role: 'system', content: prompts.perplexity },
                                     { role: 'user', content: message },
-                                    { role: 'assistant', content: '', tool_calls: collectedToolCalls },
+                                    { role: 'assistant', content: '', tool_calls: toolCall },
                                     { role: 'tool', content: JSON.stringify(toolResult), tool_call_id: toolCall.id },
                                 ],
                                 temperature: 0.7,
                                 stream: true,
                             });
 
+                            // Similar buffering for any potential further tool calls
+                            const followToolBuffers = {};
+
                             for await (const chunk of followStream) {
                                 const delta = chunk.choices?.[0]?.delta || {};
+
                                 if (delta.content) {
                                     aiReply += delta.content;
                                     sendData(JSON.stringify(delta.content));
+                                }
+
+                                if (delta.tool_calls) {
+                                    for (const tc of delta.tool_calls) {
+                                        if (!followToolBuffers[tc.id]) {
+                                            followToolBuffers[tc.id] = {
+                                                id: tc.id,
+                                                type: tc.type,
+                                                function: { name: tc.function.name, arguments: '' },
+                                            };
+                                        }
+                                        if (typeof tc.function.arguments === 'string') {
+                                            followToolBuffers[tc.id].function.arguments += tc.function.arguments;
+                                        }
+                                    }
                                 }
                             }
 

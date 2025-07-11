@@ -9,7 +9,6 @@ export default defineConfig(({ mode }) => {
   // `undefined` from being passed to the proxy which ultimately causes Node's URL
   // parser to attempt `protocol.split(':')`, leading to a runtime error.
   const apiUrl = env.VITE_API_URL || 'http://localhost:3000'
-  console.log('Using API URL:', apiUrl)
   return {
     plugins: [vue()],
     build: {
