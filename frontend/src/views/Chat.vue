@@ -66,7 +66,7 @@ async function getConversations() {
     conversations.value = res.data?.data || [];
   } catch (err) {
     console.error(err);
-    router.push('/login');
+    // Removed automatic logout to keep the user on the current page even when an error occurs
   }
 }
 
@@ -173,7 +173,7 @@ async function sendMessage() {
     }
   } catch (err) {
     console.error(err);
-    router.push('/login');
+    // Removed automatic logout to keep the user on the current page even when an error occurs
   }
 }
 
@@ -196,7 +196,7 @@ async function deleteConversation(conversationId, e) {
     }
   } catch (err) {
     console.error(err);
-    router.push('/login');
+    // Removed automatic logout to keep the user on the current page even when an error occurs
   }
 }
 

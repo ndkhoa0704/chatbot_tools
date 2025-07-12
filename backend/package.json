@@ -15,7 +15,6 @@
   "description": "",
   "dependencies": {
     "bcrypt": "^5.1.0",
-    "chatbot_tools": "file:..",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",

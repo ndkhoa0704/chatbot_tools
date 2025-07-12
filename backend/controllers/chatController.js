@@ -49,9 +49,12 @@ function ChatController() {
                         messages: [
                             { role: "system", content: prompts.perplexity },
                             { role: "user", content: message },
+                            // The assistant message that requested the tool call (content must be null)
                             { role: "assistant", content: null, tool_calls: [toolCall] },
+                            // The tool response message referencing the assistant's tool_call_id
                             { role: "tool", content: JSON.stringify(searchResults), tool_call_id: toolCall.id }
                         ],
+                        tools: Object.values(tools),
                         temperature: 0.7,
                     });
                     return secondResponse.choices?.[0]?.message?.content?.trim();
@@ -162,42 +165,24 @@ function ChatController() {
                     // If the assistant requested a tool, execute it and send back a follow-up answer
                     if (collectedToolCalls.length > 0) {
                         const toolCall = collectedToolCalls[0]; // Hiện tại chỉ hỗ trợ 1 tool call
-                        console.log('collectedToolCalls[1].function.arguments', collectedToolCalls[1].function.arguments)
+                        // Parse the streamed arguments for the tool call
                         toolCall.function.arguments = JSON.parse(collectedToolCalls[1].function.arguments);
                         const toolImpl = tools[toolCall.function.name];
                         if (toolImpl) {
                             let parsedArgs = {};
                             try { parsedArgs = toolCall.function.arguments || '{}'; } catch (_) { }
-                            console.log('parsedArgs', parsedArgs)
 
                             // Thực thi tool
                             const toolResult = await toolImpl.execute(parsedArgs);
-
                             console.log('toolResult', toolResult)
 
-                            // Gọi lại model cùng kết quả tool và stream câu trả lời kế tiếp
-                            const fs = require('fs');
-                            const path = require('path');
-                            
-                            const logData = JSON.stringify({
-                                messages: [
-                                    { role: 'system', content: prompts.perplexity },
-                                    { role: 'user', content: message },
-                                    { role: 'assistant', content: '', tool_calls: toolCall },
-                                    { role: 'tool', content: JSON.stringify(toolResult), tool_call_id: toolCall.id },
-                                ],
-                            }, null, 2);
-                            
-                            const logFilePath = path.join(__dirname, '../logs/chat_messages.log');
-                            fs.appendFileSync(logFilePath, `\n[${new Date().toISOString()}] Message Log:\n${logData}\n`);
-                            console.log('message', logData);
                             const followStream = await SELF.client.chat.completions.create({
                                 model: SELF.model,
                                 messages: [
                                     { role: 'system', content: prompts.perplexity },
                                     { role: 'user', content: message },
-                                    { role: 'assistant', content: '', tool_calls: toolCall },
-                                    { role: 'tool', content: JSON.stringify(toolResult), tool_call_id: toolCall.id },
+                                    // { role: 'assistant', content: '', tool_calls: [toolCall] },
+                                    { role: 'tool', content: JSON.stringify(toolResult), tool_call_id: toolCall.id},
                                 ],
                                 temperature: 0.7,
                                 stream: true,

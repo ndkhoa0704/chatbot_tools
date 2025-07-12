@@ -3,11 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "cd frontend && npm install && npm run build && cd ../backend && npm install && npm start",
+    "install": "cd frontend && npm install && cd ../backend && npm install",
     "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
-    "build:frontend": "cd frontend && npm install && npm run build",
-    "build": "npm run build:frontend",
-    "start:full": "npm run build && npm start",
+    "build": "cd frontend && npm install && npm run build && cd ../backend && npm install",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
