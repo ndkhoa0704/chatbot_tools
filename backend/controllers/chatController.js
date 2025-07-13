@@ -19,50 +19,7 @@ function ChatController() {
             })
         })(),
         model: process.env.LM_MODEL || "phi4:latest",
-        getAIReply: async (message) => {
-            const response = await SELF.client.chat.completions.create({
-                model: SELF.model,
-                messages: [
-                    { role: "system", content: prompts.perplexity },
-                    { role: "user", content: message },
-                ],
-                temperature: 0.7,
-                tools: Object.values(tools),
-                tool_choice: "auto",
-                stream: true,
-            });
-
-            const messageResponse = response.choices?.[0]?.message;
-
-            // Check if the model wants to call a tool
-            console.log('tool_calls', messageResponse.tool_calls)
-            if (messageResponse.tool_calls && messageResponse.tool_calls.length > 0) {
-                const toolCall = messageResponse.tool_calls[0];
-                const tool = tools[toolCall.function.name];
-                if (tool) {
-                    const args = JSON.parse(toolCall.function.arguments);
-                    const searchResults = await tool.execute(args);
-
-                    // Send the tool results back to the model
-                    const secondResponse = await SELF.client.chat.completions.create({
-                        model: SELF.model,
-                        messages: [
-                            { role: "system", content: prompts.perplexity },
-                            { role: "user", content: message },
-                            // The assistant message that requested the tool call (content must be null)
-                            { role: "assistant", content: null, tool_calls: [toolCall] },
-                            // The tool response message referencing the assistant's tool_call_id
-                            { role: "tool", content: JSON.stringify(searchResults), tool_call_id: toolCall.id }
-                        ],
-                        tools: Object.values(tools),
-                        temperature: 0.7,
-                    });
-                    return secondResponse.choices?.[0]?.message?.content?.trim();
-                }
-            }
-
-            return messageResponse?.content?.trim();
-        },
+        temperature: 0.7,
     }
 
     return {
@@ -113,7 +70,7 @@ function ChatController() {
                             { role: 'system', content: prompts.perplexity },
                             { role: 'user', content: message },
                         ],
-                        temperature: 0.7,
+                        temperature: SELF.temperature,
                         tools: Object.values(tools),
                         tool_choice: 'auto',
                         stream: true,
@@ -184,7 +141,7 @@ function ChatController() {
                                     // { role: 'assistant', content: '', tool_calls: [toolCall] },
                                     { role: 'tool', content: JSON.stringify(toolResult), tool_call_id: toolCall.id},
                                 ],
-                                temperature: 0.7,
+                                temperature: SELF.temperature,
                                 stream: true,
                             });
 
